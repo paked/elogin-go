@@ -6,21 +6,24 @@ package elogin
 //	-Register(username, password): Register user
 
 import (
-	// "errors"
+	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
+	"time"
 )
 
 type User struct {
-	Username string
-	Password string
+	Username  string
+	Password  string
+	Timestamp time.Time
 }
 
 var connection *mgo.Session
 var con *mgo.Collection
 
-var database string = "users-elogin-v1"
+const database string = "users-elogin-v1"
+
+const userDB string = "usersI"
 
 func Init() {
 	session, err := mgo.Dial("localhost:27017")
@@ -29,47 +32,69 @@ func Init() {
 		panic(err)
 	}
 	defer connection.Close()
-
-	c := connection.DB(database).C("users")
-	err = c.Insert(&User{"harrison", "xkcd"}, &User{"xyz", "homie"})
-	if err != nil {
-		panic(err)
-	}
-
-	con = c
-
-	result := User{}
-	err = c.Find(bson.M{"username": "harrison"}).One(&result)
 	// log.Println("password:", result.Password)
-	if err != nil {
-		panic(err)
-	}
 
-	log.Println("Hello v2")
+	c := session.DB(database).C(userDB)
+	//
+	user := []User{}
+	err = c.Find(bson.M{}).Sort("timestamp").All(&user)
+	fmt.Printf("")
+
+	// c.RemoveAll(&User{})
+
 }
 
-func connectToDatabase(db string, collection string) (*mgo.Session, error) {
+func connectToDatabase() (*mgo.Session, error) {
 	session, err := mgo.Dial("localhost:27017")
-	if err != nil {
-		panic(err)
-	}
-	// defer session.Close()
-
-	// c := connection.DB(db).C(collection)
-
 	return session, err
 }
 
 func Login(username string, password string) (User, error) {
-	sesh, err := connectToDatabase("", "") //mgo.Dial("localhost:27017")
+	sesh, err := connectToDatabase()
+	if err != nil {
+		panic(err)
+	}
 	defer sesh.Close()
-	c := sesh.DB(database).C("users")
+
+	c := sesh.DB(database).C(userDB)
 	user := User{}
 	err = c.Find(bson.M{"username": username, "password": password}).One(&user)
 
+	sesh.Close()
 	return user, err
 }
 
-func Register() {
+func Register(username string, password string) (User, error) {
+	sesh, err := connectToDatabase()
+	if err != nil {
+		panic(err)
+	}
+	defer sesh.Close()
 
+	c := sesh.DB(database).C(userDB)
+	user := User{}
+	err = c.Find(bson.M{"username": username}).One(&user)
+
+	if user == (User{}) {
+		newUser := User{username, password, time.Now()}
+		c.Insert(&newUser)
+
+		return newUser, nil
+	}
+
+	sesh.Close()
+
+	return User{}, nil
+}
+
+func Remove(username string, password string) error {
+	sesh, err := connectToDatabase()
+	if err != nil {
+		panic(err)
+	}
+	defer sesh.Close()
+
+	c := sesh.DB(database).C(userDB)
+	err = c.Remove(bson.M{"username": username, "password": password})
+	return nil
 }
