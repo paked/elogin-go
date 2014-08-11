@@ -4,8 +4,10 @@ package elogin
 //	-Init: initialize connections
 //	-Login(username, password): Login with details
 //	-Register(username, password): Register user
+// 	-Remove(username, password): Remove a user document
 
 import (
+	"code.google.com/p/go.crypto/bcrypt"
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -23,7 +25,7 @@ var con *mgo.Collection
 
 const database string = "users-elogin-v1"
 
-const userDB string = "usersI"
+const userDB string = "users"
 
 func Init() {
 	session, err := mgo.Dial("localhost:27017")
@@ -74,9 +76,9 @@ func Register(username string, password string) (User, error) {
 	c := sesh.DB(database).C(userDB)
 	user := User{}
 	err = c.Find(bson.M{"username": username}).One(&user)
-
+	passwordCrypt, err := Crypt([]byte(password))
 	if user == (User{}) {
-		newUser := User{username, password, time.Now()}
+		newUser := User{username, string(passwordCrypt), time.Now()}
 		c.Insert(&newUser)
 
 		return newUser, nil
@@ -97,4 +99,15 @@ func Remove(username string, password string) error {
 	c := sesh.DB(database).C(userDB)
 	err = c.Remove(bson.M{"username": username, "password": password})
 	return nil
+}
+
+func Crypt(password []byte) ([]byte, error) {
+	defer clear(password)
+	return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+}
+
+func clear(b []byte) {
+	for i := 0; i < len(b); i++ {
+		b[i] = 0
+	}
 }

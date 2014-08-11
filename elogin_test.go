@@ -1,7 +1,5 @@
 package elogin
 
-//Split tests?
-
 import (
 	"testing"
 )
@@ -19,9 +17,9 @@ func TestRegister(t *testing.T) {
 	}
 
 	if user == (User{}) {
+		TestRemove(t)
 		t.Errorf("A user with that name already exists")
 	}
-
 }
 
 func TestLogin(t *testing.T) {
@@ -44,6 +42,6 @@ func TestRemove(t *testing.T) {
 
 	err := Remove(testUsername, testPassword)
 	if err != nil {
-		t.Error("Could not delete user")
+		t.Error("Could not delete user. DB user")
 	}
 }
