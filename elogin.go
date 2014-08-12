@@ -8,6 +8,7 @@ package elogin
 
 import (
 	"code.google.com/p/go.crypto/bcrypt"
+	// "errors"
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -20,34 +21,36 @@ type User struct {
 	Timestamp time.Time
 }
 
+type Settings struct {
+	URL        string `default: "localhost:27017"`
+	Database   string `default: "users-elogin-v1"`
+	Collection string `default: "users"`
+}
+
 var connection *mgo.Session
 var con *mgo.Collection
 
-const database string = "users-elogin-v1"
+var config Settings
 
-const userDB string = "users"
-
-func Init() {
-	session, err := mgo.Dial("localhost:27017")
-	connection = session
+func Init(settings Settings) {
+	config = settings
+	session, err := connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
-	defer connection.Close()
-	// log.Println("password:", result.Password)
 
-	c := session.DB(database).C(userDB)
-	//
+	c := session.DB(config.Database).C(config.Collection)
+
 	user := []User{}
 	err = c.Find(bson.M{}).Sort("timestamp").All(&user)
-	fmt.Printf("")
+	// fmt.Printf("%v", &user)/
 
-	// c.RemoveAll(&User{})
+	// c.RemoveAll(bson.M{})
 
 }
 
 func connectToDatabase() (*mgo.Session, error) {
-	session, err := mgo.Dial("localhost:27017")
+	session, err := mgo.Dial(config.URL)
 	return session, err
 }
 
@@ -58,12 +61,20 @@ func Login(username string, password string) (User, error) {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(database).C(userDB)
+	c := sesh.DB(config.Database).C(config.Collection)
 	user := User{}
-	err = c.Find(bson.M{"username": username, "password": password}).One(&user)
-
+	// err = bcrypt.CompareHashAndPassword(hashedPassword, password)
+	err = c.Find(bson.M{"username": username}).One(&user)
+	if user != (User{}) {
+		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {
+			return user, nil
+		} else {
+			return User{}, nil
+			fmt.Printf("PASSWORDS DO NOT MATCH")
+		}
+	}
 	sesh.Close()
-	return user, err
+	return user, nil
 }
 
 func Register(username string, password string) (User, error) {
@@ -73,7 +84,7 @@ func Register(username string, password string) (User, error) {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(database).C(userDB)
+	c := sesh.DB(config.Database).C(config.Collection)
 	user := User{}
 	err = c.Find(bson.M{"username": username}).One(&user)
 	passwordCrypt, err := Crypt([]byte(password))
@@ -96,9 +107,21 @@ func Remove(username string, password string) error {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(database).C(userDB)
+	c := sesh.DB(config.Database).C(config.Collection)
 	err = c.Remove(bson.M{"username": username, "password": password})
 	return nil
+}
+
+func Clean() error {
+	sesh, err := connectToDatabase()
+	if err != nil {
+		panic(err)
+	}
+	defer sesh.Close()
+
+	c := sesh.DB(config.Database).C(config.Collection)
+	c.RemoveAll(bson.M{})
+	return err
 }
 
 func Crypt(password []byte) ([]byte, error) {

@@ -7,8 +7,10 @@ import (
 const testUsername string = "bob"
 const testPassword string = "cherryTreeLane"
 
+var testConfig Settings = Settings{"localhost:27017", "users-elogin-v1", "test-users"}
+
 func TestRegister(t *testing.T) {
-	Init()
+	Init(testConfig)
 
 	user, err := Register(testUsername, testPassword)
 
@@ -17,13 +19,13 @@ func TestRegister(t *testing.T) {
 	}
 
 	if user == (User{}) {
-		TestRemove(t)
+		// TestRemove(t)
 		t.Errorf("A user with that name already exists")
 	}
 }
 
-func TestLogin(t *testing.T) {
-	Init()
+func TestLoginSuccess(t *testing.T) {
+	Init(testConfig)
 
 	user, err := Login(testUsername, testPassword)
 	if user == (User{}) {
@@ -37,11 +39,43 @@ func TestLogin(t *testing.T) {
 	}
 }
 
+func TestLoginPasswordFail(t *testing.T) {
+	Init(config)
+	user, err := Login(testUsername, testPassword+"fail")
+	if user != (User{}) {
+		t.Errorf("Password checking broken")
+	}
+
+	if err != nil {
+		t.Error("mgo database error")
+	}
+}
+
+func TestLoginUsernameFail(t *testing.T) {
+	Init(config)
+	user, err := Login(testUsername+"fail", testPassword)
+	if user != (User{}) {
+		t.Error("Username checking wrong")
+	}
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestRemove(t *testing.T) {
-	Init()
+	Init(testConfig)
 
 	err := Remove(testUsername, testPassword)
 	if err != nil {
 		t.Error("Could not delete user. DB user")
+	}
+}
+
+func TestClean(t *testing.T) {
+	Init(testConfig)
+	err := Clean()
+	if err != nil {
+		t.Error("Something went wrong cleaning the test DB, rip your elegant statements.")
 	}
 }
