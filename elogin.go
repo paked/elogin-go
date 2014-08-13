@@ -1,10 +1,13 @@
 package elogin
 
-//PACKAGE DESCRIPTION
-//	-Init: initialize connections
-//	-Login(username, password): Login with details
-//	-Register(username, password): Register user
-// 	-Remove(username, password): Remove a user document
+/*
+PACKAGE DESCRIPTION
+	-Init: initialize connections
+	-Login(username, password): Login with details
+	-Register(username, password): Register user
+	-Remove(username, password): Remove a user document
+	-Clean(): Empty an entire collection :: WARNING DANGEROUS
+*/
 
 import (
 	"code.google.com/p/go.crypto/bcrypt"
@@ -63,7 +66,6 @@ func Login(username string, password string) (User, error) {
 
 	c := sesh.DB(config.Database).C(config.Collection)
 	user := User{}
-	// err = bcrypt.CompareHashAndPassword(hashedPassword, password)
 	err = c.Find(bson.M{"username": username}).One(&user)
 	if user != (User{}) {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {

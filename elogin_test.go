@@ -9,6 +9,14 @@ const testPassword string = "cherryTreeLane"
 
 var testConfig Settings = Settings{"localhost:27017", "users-elogin-v1", "test-users"}
 
+func TestClean(t *testing.T) {
+	Init(testConfig)
+	err := Clean()
+	if err != nil {
+		t.Error("Something went wrong cleaning the test DB, rip your elegant statements.")
+	}
+}
+
 func TestRegister(t *testing.T) {
 	Init(testConfig)
 
@@ -69,13 +77,5 @@ func TestRemove(t *testing.T) {
 	err := Remove(testUsername, testPassword)
 	if err != nil {
 		t.Error("Could not delete user. DB user")
-	}
-}
-
-func TestClean(t *testing.T) {
-	Init(testConfig)
-	err := Clean()
-	if err != nil {
-		t.Error("Something went wrong cleaning the test DB, rip your elegant statements.")
 	}
 }
