@@ -19,9 +19,9 @@ import (
 )
 
 type User struct {
-	Username  string
-	Password  string
-	Timestamp time.Time
+	Username  string    `json:"username`
+	Password  string    `json:"password"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type Settings struct {
