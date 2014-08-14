@@ -30,14 +30,17 @@ type Settings struct {
 	Collection string `default: "users"`
 }
 
+type Elogin struct {
+}
+
 var connection *mgo.Session
 var con *mgo.Collection
 
 var config Settings
 
-func Init(settings Settings) {
+func (e Elogin) Init(settings Settings) {
 	config = settings
-	session, err := connectToDatabase()
+	session, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
@@ -52,13 +55,13 @@ func Init(settings Settings) {
 
 }
 
-func connectToDatabase() (*mgo.Session, error) {
+func (e Elogin) connectToDatabase() (*mgo.Session, error) {
 	session, err := mgo.Dial(config.URL)
 	return session, err
 }
 
-func Login(username string, password string) (User, error) {
-	sesh, err := connectToDatabase()
+func (e Elogin) Login(username string, password string) (User, error) {
+	sesh, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
@@ -79,8 +82,8 @@ func Login(username string, password string) (User, error) {
 	return user, nil
 }
 
-func Register(username string, password string) (User, error) {
-	sesh, err := connectToDatabase()
+func (e Elogin) Register(username string, password string) (User, error) {
+	sesh, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +92,7 @@ func Register(username string, password string) (User, error) {
 	c := sesh.DB(config.Database).C(config.Collection)
 	user := User{}
 	err = c.Find(bson.M{"username": username}).One(&user)
-	passwordCrypt, err := Crypt([]byte(password))
+	passwordCrypt, err := e.Crypt([]byte(password))
 	if user == (User{}) {
 		newUser := User{username, string(passwordCrypt), time.Now()}
 		c.Insert(&newUser)
@@ -102,8 +105,8 @@ func Register(username string, password string) (User, error) {
 	return User{}, nil
 }
 
-func Remove(username string, password string) error {
-	sesh, err := connectToDatabase()
+func (e Elogin) Remove(username string, password string) error {
+	sesh, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
@@ -114,8 +117,8 @@ func Remove(username string, password string) error {
 	return nil
 }
 
-func Clean() error {
-	sesh, err := connectToDatabase()
+func (e Elogin) Clean() error {
+	sesh, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
@@ -126,12 +129,12 @@ func Clean() error {
 	return err
 }
 
-func Crypt(password []byte) ([]byte, error) {
-	defer clear(password)
+func (e Elogin) Crypt(password []byte) ([]byte, error) {
+	defer e.clear(password)
 	return bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
 }
 
-func clear(b []byte) {
+func (e Elogin) clear(b []byte) {
 	for i := 0; i < len(b); i++ {
 		b[i] = 0
 	}

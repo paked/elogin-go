@@ -9,18 +9,22 @@ const testPassword string = "cherryTreeLane"
 
 var testConfig Settings = Settings{"localhost:27017", "users-elogin-v1", "test-users"}
 
+var elogin Elogin
+
+func TestInit(t *testing.T) {
+	elogin = Elogin{}
+	elogin.Init(testConfig)
+}
+
 func TestClean(t *testing.T) {
-	Init(testConfig)
-	err := Clean()
+	err := elogin.Clean()
 	if err != nil {
 		t.Error("Something went wrong cleaning the test DB, rip your elegant statements.")
 	}
 }
 
 func TestRegister(t *testing.T) {
-	Init(testConfig)
-
-	user, err := Register(testUsername, testPassword)
+	user, err := elogin.Register(testUsername, testPassword)
 
 	if err != nil {
 		t.Errorf("mgo database error")
@@ -33,9 +37,8 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLoginSuccess(t *testing.T) {
-	Init(testConfig)
 
-	user, err := Login(testUsername, testPassword)
+	user, err := elogin.Login(testUsername, testPassword)
 	if user == (User{}) {
 		t.Errorf("A user with that username and password combination does not exist")
 		t.FailNow()
@@ -48,8 +51,7 @@ func TestLoginSuccess(t *testing.T) {
 }
 
 func TestLoginPasswordFail(t *testing.T) {
-	Init(config)
-	user, err := Login(testUsername, testPassword+"fail")
+	user, err := elogin.Login(testUsername, testPassword+"fail")
 	if user != (User{}) {
 		t.Errorf("Password checking broken")
 	}
@@ -60,8 +62,7 @@ func TestLoginPasswordFail(t *testing.T) {
 }
 
 func TestLoginUsernameFail(t *testing.T) {
-	Init(config)
-	user, err := Login(testUsername+"fail", testPassword)
+	user, err := elogin.Login(testUsername+"fail", testPassword)
 	if user != (User{}) {
 		t.Error("Username checking wrong")
 	}
@@ -72,9 +73,7 @@ func TestLoginUsernameFail(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	Init(testConfig)
-
-	err := Remove(testUsername, testPassword)
+	err := elogin.Remove(testUsername, testPassword)
 	if err != nil {
 		t.Error("Could not delete user. DB user")
 	}
