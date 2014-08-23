@@ -12,9 +12,9 @@ PACKAGE DESCRIPTION
 import (
 	"code.google.com/p/go.crypto/bcrypt"
 	// "errors"
-	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"log"
 	"time"
 )
 
@@ -31,32 +31,39 @@ type Settings struct {
 }
 
 type Elogin struct {
+	XYZ    string
+	Config Settings
+}
+
+type Response struct {
 }
 
 var connection *mgo.Session
 var con *mgo.Collection
 
-var config Settings
-
 func (e Elogin) Init(settings Settings) {
-	config = settings
+	e.Config = settings
 	session, err := e.connectToDatabase()
 	if err != nil {
 		panic(err)
 	}
 
-	c := session.DB(config.Database).C(config.Collection)
+	c := session.DB(e.Config.Database).C(e.Config.Collection)
 
 	user := []User{}
 	err = c.Find(bson.M{}).Sort("timestamp").All(&user)
-	// fmt.Printf("%v", &user)/
+	log.Printf("%v", &user)
 
 	// c.RemoveAll(bson.M{})
 
 }
 
+/*
+	AAA => aba
+	AAA => bab
+*/
 func (e Elogin) connectToDatabase() (*mgo.Session, error) {
-	session, err := mgo.Dial(config.URL)
+	session, err := mgo.Dial(e.Config.URL)
 	return session, err
 }
 
@@ -67,16 +74,18 @@ func (e Elogin) Login(username string, password string) (User, error) {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(config.Database).C(config.Collection)
+	c := sesh.DB(e.Config.Database).C(e.Config.Collection)
 	user := User{}
 	err = c.Find(bson.M{"username": username}).One(&user)
 	if user != (User{}) {
 		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) == nil {
 			return user, nil
 		} else {
+			log.Printf("PASSWORDS DO NOT MATCH")
 			return User{}, nil
-			fmt.Printf("PASSWORDS DO NOT MATCH")
 		}
+	} else {
+		log.Println("USER NOT FOUND")
 	}
 	sesh.Close()
 	return user, nil
@@ -89,14 +98,14 @@ func (e Elogin) Register(username string, password string) (User, error) {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(config.Database).C(config.Collection)
+	c := sesh.DB(e.Config.Database).C(e.Config.Collection)
 	user := User{}
 	err = c.Find(bson.M{"username": username}).One(&user)
 	passwordCrypt, err := e.Crypt([]byte(password))
 	if user == (User{}) {
 		newUser := User{username, string(passwordCrypt), time.Now()}
-		c.Insert(&newUser)
-
+		c.Insert(newUser)
+		log.Printf("%v new user", newUser)
 		return newUser, nil
 	}
 
@@ -112,7 +121,7 @@ func (e Elogin) Remove(username string, password string) error {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(config.Database).C(config.Collection)
+	c := sesh.DB(e.Config.Database).C(e.Config.Collection)
 	err = c.Remove(bson.M{"username": username, "password": password})
 	return nil
 }
@@ -124,7 +133,7 @@ func (e Elogin) Clean() error {
 	}
 	defer sesh.Close()
 
-	c := sesh.DB(config.Database).C(config.Collection)
+	c := sesh.DB(e.Config.Database).C(e.Config.Collection)
 	c.RemoveAll(bson.M{})
 	return err
 }

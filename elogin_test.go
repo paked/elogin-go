@@ -37,7 +37,6 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLoginSuccess(t *testing.T) {
-
 	user, err := elogin.Login(testUsername, testPassword)
 	if user == (User{}) {
 		t.Errorf("A user with that username and password combination does not exist")
